@@ -1,5 +1,3 @@
-#ifndef TABLE_H
-#define TABLE_H
 /*
  * table.h - generic hash table
  *
@@ -30,5 +28,5 @@ void *TAB_pop(TAB_table t);
  *  including shadowed bindings, in order from the most 
  *  recent binding of any key to the oldest binding in the table */
 void TAB_dump(TAB_table t, void (*show)(void *key, void *value));
-#endif
+
 

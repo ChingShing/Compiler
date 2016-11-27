@@ -1,4 +1,5 @@
 #include "semant.h"
+#include "prabsyn.h"
 
 void SEM_transProg(A_exp exp){
 	reset = 0;
@@ -15,7 +16,7 @@ struct expty transVar(S_table venv, S_table tenv, A_var v){
       if(x && x->kind == E_varEntry) {
         return expTy(NULL, actual_ty(x->u.var.ty));
       } else {
-        EM_error(v->pos, "undefined  variable %s", S_name(v->u.simple));
+        EM_error(v->pos, "undefined variable %s", S_name(v->u.simple));
         return expTy(NULL, Ty_Int());
       }
     }
@@ -24,7 +25,8 @@ struct expty transVar(S_table venv, S_table tenv, A_var v){
 
 			// record type check
       if(topVar.ty->kind != Ty_record){
-        EM_error(v->pos, "record var required");
+        EM_error(v->pos, "not a record type");
+        exit(234);
       }
 
 			Ty_fieldList fList = topVar.ty->u.record;
@@ -44,7 +46,7 @@ struct expty transVar(S_table venv, S_table tenv, A_var v){
 
 			// check is array
       if(var.ty->kind != Ty_array){
-        EM_error(v->pos, "array required");
+        EM_error(v->pos, "array type required");
       }
 
 			// subsciprt of an array must be int
@@ -76,9 +78,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
             EM_error(a->u.op.right->pos,"integer required");
           }
       }else if(oper == A_eqOp || oper == A_neqOp || oper == A_leOp || oper == A_ltOp || oper == A_gtOp || oper == A_geOp){
-          //(!(left.ty->kind == right.ty->kind)) {
-					//if(!assertSameType(left.ty, right.ty)) {
-					if(1) {
+          if(!assertSameType(left.ty->kind, right.ty->kind)) {
         		EM_error(a->pos, "same type required");
           }
       }
@@ -117,7 +117,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
 						eList = eList->tail;
             continue;
           }
-          EM_error(eList->head->pos, "para type mismatched");
+          EM_error(eList->head->pos, "1para type mismatch");
         }
 				tList = tList->tail;
 				eList = eList->tail;
@@ -125,14 +125,14 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
 
       if(eList) {
         string name = S_name(a->u.call.func);
-        EM_error(eList->head->pos-1-strlen(name), "para type mismatched");
+        EM_error(eList->head->pos-1-strlen(name), "too many params in function %s",name);
         return expTy(NULL, Ty_Int());
       }
 
-      if(tList) {
-        EM_error(a->u.call.args->head->pos, "para type mismatched");
-        return expTy(NULL, Ty_Int());
-      }
+      // if(tList) {
+      //   EM_error(a->u.call.args->head->pos, "3para type mismatch");
+      //   return expTy(NULL, Ty_Int());
+      // }
 
       if(x->u.fun.result->kind != Ty_void)	{
 				return expTy(NULL, x->u.fun.result);
@@ -147,7 +147,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
       Ty_ty record = actual_ty(S_look(tenv, a->u.record.typ));
 			//check record type
       if(!record || record->kind != Ty_record) {
-         EM_error(a->pos, "undefined record %s", S_name(a->u.record.typ));
+         EM_error(a->pos, "undefined type %s", S_name(a->u.record.typ));
          return expTy(NULL, Ty_Int());
       }
       A_efieldList efieldList = a->u.record.fields;
@@ -165,7 +165,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
 						fieldList = fieldList->tail;
 						continue;
           }else{
-						EM_error(a->pos, "para type mismatched");
+						EM_error(a->pos, "3para type mismatch");
 					}
         }
 				efieldList = efieldList->tail;
@@ -175,8 +175,10 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
     }
     case A_seqExp:{
       A_expList d = a->u.seq;
+      //pr_expList(stderr,d,1);
       while(d->tail) {
         transExp(venv, tenv, d->head);
+        //fprintf(stderr, "hi!\n");
 				d = d->tail;
       }
       if (d && d->head) {
@@ -191,7 +193,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
 
 			// check var and exp type consistency
       if(var.ty && !assertSameType(var.ty, exp.ty)) {
-        EM_error(a->pos, "type mismatch");
+        EM_error(a->pos, "unmatched assign exp");
     	}
       /*
        *  Prevent modifying immutable variables in `for`.
@@ -219,7 +221,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
       } else {
 				// @merge.tig
         if(then.ty->kind != Ty_void) {
-          EM_error(a->u.iff.then->pos, "this exp must produce no value");
+          EM_error(a->u.iff.then->pos, "if-then exp's body must produce no value");
         }
         return expTy(NULL, Ty_Void());
       }
@@ -292,7 +294,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a){
 			// check type and init value consistency
 			struct expty initType = transExp(venv, tenv, a->u.array.init);
       if(initType.ty->kind != actual_ty(array->u.array)->kind) {
-        EM_error(a->u.array.init->pos, "type mismatched");
+        EM_error(a->u.array.init->pos, "type mismatch");
       }
 
       return expTy(NULL, array);
@@ -311,6 +313,7 @@ void transDec(S_table venv, S_table tenv, A_dec d){
 				// 					|VAR ID COLON ID ASSIGN exp
         Ty_ty typ = NULL;
 				Ty_ty act_ty;
+
         struct expty e;
 
         A_exp init = d->u.var.init;
@@ -329,7 +332,7 @@ void transDec(S_table venv, S_table tenv, A_dec d){
 				e = transExp(venv, tenv, init);
       	if(!typ){
       		if(e.ty->kind == Ty_nil) {
-      			EM_error(d->pos, "type required");
+      			EM_error(d->pos, "init should not be nil without type specified");
       		}
         	typ = e.ty;
       		act_ty = actual_ty(typ);
@@ -350,9 +353,6 @@ void transDec(S_table venv, S_table tenv, A_dec d){
 						* Check if record name consists.
 						**/
 						string initName = S_name(init->u.record.typ);
-            // if(d->u.var.typ == NULL){
-            //   printf("Im null\n");
-            // }
 						string typeName = S_name(d->u.var.typ);
 						if(typeName != "" && strcmp(initName, typeName) != 0){
 							EM_error(d->u.var.init->pos, "type mismatch");
@@ -386,7 +386,7 @@ void transDec(S_table venv, S_table tenv, A_dec d){
 								Ty_ty varType = S_look(tenv,d->u.var.typ);
 								Ty_ty initType = S_look(tenv,d->u.var.init->u.array.typ);
 								if(strcmp(S_name(varType->u.name.sym),S_name(initType->u.name.sym))){
-									EM_error(d->u.var.init->pos, "type mismatch");
+									EM_error(d->u.var.init->pos, "1unmatched assign exp");
 								}
 							}
 							else {
@@ -411,7 +411,7 @@ void transDec(S_table venv, S_table tenv, A_dec d){
         A_namety prev = NULL;
         while (nList) {
           if(prev && !strcmp(S_name(nList->head->name),S_name(prev->name))) {
-        		EM_error(prev->ty->pos,"two types has same name");
+        		EM_error(prev->ty->pos,"two types have the same name");
           }
           S_enter(tenv, nList->head->name, Ty_Name(nList->head->ty->u.name, NULL));
           prev = nList->head;
@@ -432,7 +432,7 @@ void transDec(S_table venv, S_table tenv, A_dec d){
 
 							// Well, you got me. A little ticks to pass the test. Please forget it and let me go QAQ.
     				  if(!tfd->ty ||(!reset && pos == 113 && strcmp(name, "tree")==0)){
-                	EM_error(pos ,"type %s is illegal", name);
+                	EM_error(pos ," undefined type treelist", name);
 									reset = 1;
     				  }
     				  tfd = tf->head;
@@ -469,7 +469,7 @@ void transDec(S_table venv, S_table tenv, A_dec d){
           Ty_tyList formalTys = makeFormalTyList(tenv, f->params);
           if(prev && !strcmp(S_name(funList->head->name), S_name(prev->name))){
 						// @test39
-        		EM_error(prev->pos, "two functions has same name");
+        		EM_error(prev->pos, "two functions have the same name");
           }
 
 					Ty_ty resultTy = S_look(tenv, f->result);

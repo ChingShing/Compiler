@@ -1,7 +1,3 @@
-/* *
- * Chap 5 Semantic Analysis
- * A type-checking phase for the compiler
- */
 #ifndef SEMANT_H
 #define SEMANT_H
 

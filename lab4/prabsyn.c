@@ -15,7 +15,7 @@ static void pr_dec(FILE *out, A_dec v, int d);
 static void pr_ty(FILE *out, A_ty v, int d);
 static void pr_field(FILE *out, A_field v, int d);
 static void pr_fieldList(FILE *out, A_fieldList v, int d);
-static void pr_expList(FILE *out, A_expList v, int d);
+void pr_expList(FILE *out, A_expList v, int d);
 static void pr_fundec(FILE *out, A_fundec v, int d);
 static void pr_fundecList(FILE *out, A_fundecList v, int d);
 static void pr_decList(FILE *out, A_decList v, int d);
@@ -198,7 +198,7 @@ static void pr_fieldList(FILE *out, A_fieldList v, int d) {
  else fprintf(out, "fieldList()");
 }
 
-static void pr_expList(FILE *out, A_expList v, int d) {
+void pr_expList(FILE *out, A_expList v, int d) {
  indent(out, d);
  if (v) {
    fprintf(out, "expList(\n"); 
@@ -244,7 +244,7 @@ static void pr_decList(FILE *out, A_decList v, int d) {
 
 static void pr_namety(FILE *out, A_namety v, int d) {
  indent(out, d);
- fprintf(out, "namety(%s,\n", S_name(v->name));
+ fprintf(out, "namety(%s,\n", S_name(v->name)); 
  pr_ty(out, v->ty, d+1); fprintf(out, ")");
 }
 

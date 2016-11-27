@@ -8,8 +8,7 @@ struct S_symbol_ {string name; S_symbol next;};
 
 static S_symbol mksymbol(string name, S_symbol next)
 {S_symbol s=checked_malloc(sizeof(*s));
- s->name=name; 
- s->next=next;
+ s->name=name; s->next=next;
  return s;
 }
 
@@ -41,9 +40,7 @@ S_symbol S_Symbol(string name)
  
 string S_name(S_symbol sym)
 {
- // fprintf(stderr,"%s\n", sym->name);
- // fflush(stderr);
- return (string)sym->name;
+ return sym->name;
 }
 
 S_table S_empty(void) 
